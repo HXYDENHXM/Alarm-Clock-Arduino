@@ -1,0 +1,77 @@
+**NOTE**: That Resistors Are Not Required**** (line 30) as an example.
+
+
+
+Components Needed:
+Arduino Uno or any compatible board
+16x2 LCD Display 
+DS1307 RTC Module
+Passive Buzzer
+5 Push Buttons
+10kΩ potentiometer
+Breadboard and jumper wires
+Resistors (220Ω for the LCD backlight, 10kΩ for each button)
+Wiring Instructions:
+
+1. Connecting the 16x2 LCD Display:
+
+LCD Pin  |  Arduino Pin
+-----------------------
+VSS      |  GND
+VDD      |  5V
+V0       |  Potentiometer middle pin
+RS       |  7
+RW       |  GND
+E        |  8
+D4       |  9
+D5       |  10
+D6       |  11
+D7       |  12
+A        |  5V (through 220Ω resistor) <- optional.****
+K        |  GND
+
+
+
+2. Connecting the DS1307 RTC Module:
+VCC: Connect to the 5V pin on the Arduino.
+GND: Connect to the GND pin on the Arduino.
+SDA: Connect to the A4 pin on the Arduino (shared with the LCD).
+SCL: Connect to the A5 pin on the Arduino (shared with the LCD).
+
+3. Connecting the Passive Buzzer:
+Positive pin: Connect to pin 13 on the Arduino.
+Negative pin: Connect to GND on the Arduino.
+
+4. Connecting the Buttons:
+Each button will have two legs. One leg will be connected to the Arduino, and the other leg will be connected to GND through a 10kΩ resistor (pull-down resistor).
+
+*Snooze Button:
+One leg to pin 2 on the Arduino.
+Other leg to GND through a 10kΩ resistor.
+Same leg to 5V (without resistor).
+
+*Set Hour Button:
+One leg to pin 3 on the Arduino.
+Other leg to GND through a 10kΩ resistor.
+Same leg to 5V (without resistor).
+
+*Set Minute Button:
+One leg to pin 4 on the Arduino.
+Other leg to GND through a 10kΩ resistor.
+Same leg to 5V (without resistor).
+
+*Increase Button:
+One leg to pin 5 on the Arduino.
+Other leg to GND through a 10kΩ resistor.
+Same leg to 5V (without resistor).
+
+*Decrease Button:
+One leg to pin 6 on the Arduino.
+Other leg to GND through a 10kΩ resistor.
+Same leg to 5V (without resistor).
+
+5. Connecting the Potentiometer:
+Middle Pin: Connect to the V0 pin of the LCD.
+One Outer Pin: Connect to 5V.
+Other Outer Pin: Connect to GND.
+^^^ (Doesnt matter which outer pins connect to GND or 5V)  

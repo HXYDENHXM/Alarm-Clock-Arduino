@@ -1,0 +1,286 @@
+# Alarm-Clock-Arduino
+//Alarm Clock With Arduino, 16x2 LCD, Buzzer, 5 Buttons, DS1307, and a potentiometer 
+
+
+
+__
+Copy from under the 3 lines.
+---
+#include <Wire.h>
+#include <RTClib.h>
+#include <LiquidCrystal.h>
+
+// Initialize the LCD with the pins
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+
+// Initialize the RTC
+RTC_DS1307 rtc;
+
+// Passive Buzzer pin
+const int buzzer = 13;
+
+// Button pins
+const int snoozeButton = 2;
+const int setHourButton = 3;
+const int setMinuteButton = 4;
+const int increaseButton = 5;
+const int decreaseButton = 6;
+
+// Variables to store alarm time and current time being set
+int currentHour = 0;
+int currentMinute = 0;
+int alarmHour = 0;
+int alarmMinute = 0;
+bool alarmSet = false;
+bool settingTime = false;
+bool settingAlarm = false;
+bool hourSetting = true;  // Track if setting hour or minute
+bool isPM = false;  // Track AM/PM for 12-hour format
+
+// Buzzer settings
+int buzzerFrequency = 750; // Frequency in Hz
+int buzzerOnTime = 500;     // Time buzzer stays on in milliseconds
+int buzzerOffTime = 500;    // Time between beeps in milliseconds
+
+// Snooze settings
+const int snoozeDuration = 5; // Snooze duration in minutes
+bool snoozeActive = false;
+int snoozeHour = 0;
+int snoozeMinute = 0;
+
+// Snooze button press tracking
+unsigned long lastSnoozePress = 0;
+int snoozePressCount = 0;
+
+void setup() {
+  // Initialize Serial Monitor
+  Serial.begin(9600);
+
+  // Initialize the LCD
+  lcd.begin(16, 2);
+
+  // Initialize the RTC
+  if (!rtc.begin()) {
+    lcd.print("Couldn't find RTC");
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+
+  if (!rtc.isrunning()) {
+    lcd.print("RTC is NOT running!");
+    Serial.println("RTC is NOT running!");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+
+  // Initialize the buttons with internal pull-up resistors
+  pinMode(snoozeButton, INPUT_PULLUP);
+  pinMode(setHourButton, INPUT_PULLUP);
+  pinMode(setMinuteButton, INPUT_PULLUP);
+  pinMode(increaseButton, INPUT_PULLUP);
+  pinMode(decreaseButton, INPUT_PULLUP);
+
+  // Initialize the buzzer
+  pinMode(buzzer, OUTPUT);
+  noTone(buzzer); // Ensure buzzer is off initially
+}
+
+void loop() {
+  static unsigned long lastUpdate = 0;
+  unsigned long currentMillis = millis();
+
+  // Update the display every second
+  if (currentMillis - lastUpdate >= 1000) {
+    lastUpdate = currentMillis;
+    updateDisplay();
+  }
+
+  checkButtons();
+  checkAlarm();
+  resetSnoozePressCount();
+}
+
+void updateDisplay() {
+  DateTime now = rtc.now();
+
+  // Display current time
+  lcd.setCursor(0, 0);
+  lcd.print("Time: ");
+  printTime(now.hour(), now.minute(), isPM);
+  lcd.print(isPM ? " PM" : " AM");
+
+  // Display alarm time
+  lcd.setCursor(0, 1);
+  lcd.print("Alarm: ");
+  printTime(alarmHour, alarmMinute, isPM);
+  lcd.print(alarmSet ? (isPM ? " PM ON" : " AM ON") : " OFF");
+}
+
+void checkButtons() {
+  if (digitalRead(setHourButton) == LOW) {
+    Serial.println("Set Hour Button Pressed");
+    delay(200); // Debounce delay
+    if (!settingTime && !settingAlarm) {
+      settingTime = true;
+      hourSetting = true;
+      Serial.println("Entering Hour Setting Mode for Current Time");
+      DateTime now = rtc.now();
+      currentHour = now.hour();
+      currentMinute = now.minute();
+    } else if (settingTime && hourSetting) {
+      hourSetting = false;  // Switch to minute setting mode
+      Serial.println("Switching to Minute Setting Mode for Current Time");
+    } else if (settingTime && !hourSetting) {
+      // Save the current time
+      DateTime now = rtc.now();
+      rtc.adjust(DateTime(now.year(), now.month(), now.day(), currentHour, currentMinute, now.second()));
+      settingTime = false;
+      Serial.println("Current Time Set, Exiting Setting Mode");
+    } else if (settingAlarm) {
+      settingAlarm = false;
+      Serial.println("Exiting Alarm Setting Mode");
+    }
+  }
+
+  if (digitalRead(setMinuteButton) == LOW) {
+    Serial.println("Set Minute Button Pressed");
+    delay(200); // Debounce delay
+    if (!settingTime && !settingAlarm) {
+      settingAlarm = true;
+      hourSetting = true;
+      Serial.println("Entering Hour Setting Mode for Alarm");
+    } else if (settingAlarm && hourSetting) {
+      hourSetting = false;  // Switch to minute setting mode
+      Serial.println("Switching to Minute Setting Mode for Alarm");
+    } else if (settingAlarm && !hourSetting) {
+      // Save the alarm time
+      settingAlarm = false;
+      alarmSet = true;
+      Serial.println("Alarm Set, Exiting Setting Mode");
+    } else if (settingTime) {
+      settingTime = false;
+      Serial.println("Exiting Time Setting Mode");
+    }
+  }
+
+  if (digitalRead(increaseButton) == LOW) {
+    Serial.println("Increase Button Pressed");
+    delay(200); // Debounce delay
+    if (settingTime) {
+      if (hourSetting) {
+        currentHour = (currentHour + 1) % 24;
+        Serial.print("Incrementing Current Hour: ");
+        Serial.println(currentHour);
+      } else {
+        currentMinute = (currentMinute + 1) % 60;
+        Serial.print("Incrementing Current Minute: ");
+        Serial.println(currentMinute);
+      }
+    } else if (settingAlarm) {
+      if (hourSetting) {
+        alarmHour = (alarmHour + 1) % 24;
+        Serial.print("Incrementing Alarm Hour: ");
+        Serial.println(alarmHour);
+      } else {
+        alarmMinute = (alarmMinute + 1) % 60;
+        Serial.print("Incrementing Alarm Minute: ");
+        Serial.println(alarmMinute);
+      }
+    }
+  }
+
+  if (digitalRead(decreaseButton) == LOW) {
+    Serial.println("Decrease Button Pressed");
+    delay(200); // Debounce delay
+    if (settingTime) {
+      if (hourSetting) {
+        currentHour = (currentHour - 1 + 24) % 24;
+        Serial.print("Decreasing Current Hour: ");
+        Serial.println(currentHour);
+      } else {
+        currentMinute = (currentMinute - 1 + 60) % 60;
+        Serial.print("Decreasing Current Minute: ");
+        Serial.println(currentMinute);
+      }
+    } else if (settingAlarm) {
+      if (hourSetting) {
+        alarmHour = (alarmHour - 1 + 24) % 24;
+        Serial.print("Decreasing Alarm Hour: ");
+        Serial.println(alarmHour);
+      } else {
+        alarmMinute = (alarmMinute - 1 + 60) % 60;
+        Serial.print("Decreasing Alarm Minute: ");
+        Serial.println(alarmMinute);
+      }
+    }
+  }
+
+  if (digitalRead(snoozeButton) == LOW) {
+    Serial.println("Snooze Button Pressed");
+    delay(200); // Debounce delay
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastSnoozePress < 500) {
+      snoozePressCount++;
+    } else {
+      snoozePressCount = 1;
+    }
+    lastSnoozePress = currentMillis;
+
+    if (snoozePressCount == 2) {
+      alarmSet = !alarmSet;
+      snoozeActive = false;
+      snoozePressCount = 0;
+      noTone(buzzer);
+      Serial.println(alarmSet ? "Alarm Turned On" : "Alarm Turned Off");
+    } else if (snoozePressCount == 1 && alarmSet) {
+      DateTime now = rtc.now();
+      snoozeMinute = now.minute() + snoozeDuration;
+      snoozeHour = now.hour();
+      if (snoozeMinute >= 60) {
+        snoozeMinute -= 60;
+        snoozeHour = (snoozeHour + 1) % 24;
+      }
+      snoozeActive = true;
+      noTone(buzzer); // Turn off the buzzer
+      Serial.println("Snooze Activated");
+    }
+  }
+}
+
+void checkAlarm() {
+  DateTime now = rtc.now();
+  if (alarmSet && now.hour() == alarmHour && now.minute() == alarmMinute) {
+    if (!snoozeActive || (now.hour() == snoozeHour && now.minute() == snoozeMinute)) {
+      tone(buzzer, buzzerFrequency); // Customizable frequency
+      delay(buzzerOnTime); // Customizable on time
+      noTone(buzzer);
+      delay(buzzerOffTime); // Customizable off time
+      Serial.println("ALARM! Buzzer ON");
+    }
+  } else {
+    noTone(buzzer);
+  }
+}
+
+void resetSnoozePressCount() {
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastSnoozePress > 1000) {
+    snoozePressCount = 0;
+  }
+}
+
+void printTime(int hour, int minute, bool& isPM) {
+  isPM = hour >= 12;
+  hour = hour % 12;
+  if (hour == 0) hour = 12; // Handle midnight and noon
+  lcd.print(hour);
+  lcd.print(':');
+  if (minute < 10) lcd.print('0');
+  lcd.print(minute);
+}
+
+void printTwoDigits(int number) {
+  if (number < 10) {
+    lcd.print('0');
+  }
+  lcd.print(number);
+}

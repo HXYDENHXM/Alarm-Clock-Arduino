@@ -1,0 +1,52 @@
+*LCD* 
+
+VSS->Ground
+VDD->5v
+VO->Middle pin on potentiometer**
+RS->7
+E->8
+D0->*
+D1->*
+D2->*
+D3->*
+D4->9
+D5->10
+D6->11
+D7->12
+A->5v
+K->Ground
+
+
+
+
+*POTENTIOMETER* (P) for clarity.
+
+If the (P) has one pin facing toward you the the following should be done.
+
+The left pin->5v
+The Middle Pin->VO on the LCD**
+The Right Pin->Ground
+
+
+*BUZZER*
+
+Positive pin->13
+Negative pin->Ground
+
+*DS1307*
+
+GND->Ground
+VCC->5v
+SDA->A4
+SCL->A5
+SQW->*
+
+*BUTTONS* (B)
+
+B1->2
+B2->3
+B3->4
+B4->6
+B5->5
+lcd.begin
+();
